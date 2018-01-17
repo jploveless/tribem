@@ -28,6 +28,14 @@ function [slip, trac, o, G] = tribem(patch, d, bc, varargin)
 %      v = 2: Calculate stress only (returned to O.s as a 6N-by-1 vector)
 %      v = 3: Calculate displacement and stress
 %
+%   [SLIP, TRAC, G] = TRIBEM(PATCH, D, BC) will output the structure G containing 
+%   fields of Green's functions relating slip to displacement and/or traction. This 
+%   structure can be reused as an input argument, speeding computation when only the
+%   boundary conditions and not the problem geometry have changed. 
+%
+%   [SLIP, TRAC, O, G] = TRIBEM(PATCH, D, BC, OBS) will output both O and G, when OBS
+%   is specified as an input argument. 
+%
 %   [...] = TRIBEM(PATCH, D, BC, REMS) allows specification of a remote stress tensor,
 %   REMS. The tensor components, assuming Cartesian coordinates, should be given as
 % 
@@ -245,4 +253,18 @@ end
 if c3 == 1
    slip = reshape(slip, 3, tne)';
    trac = reshape(trac, 3, tne)';
+end
+
+% Process optional output arguments
+if nargout == 3 % 3rd argument could be o or G
+   if obs.v == 999 % If no observation points are specified, it must be G
+      varargout{:} = G;
+   else
+      varargout{:} = o;
+   end
+end
+
+if nargout == 4
+   varargout{1} = o;
+   varargout{2} = G;
 end
