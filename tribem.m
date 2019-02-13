@@ -96,16 +96,22 @@ chop = 0;
 % Parse optional inputs
 noa = length(varargin);
 if noa > 0
-   for i = 1:noa
-      if isstruct(varargin{i})
-         if isfield(varargin{i}, 'lon')
+   for i = 1:noa % Loop through optional arguments
+      if isstruct(varargin{i}) % If it's a structure, it's either observations or partials
+         if isfield(varargin{i}, 'x') % If field x exists, it's observations
             obs = varargin{i};
-         else
-            G = varargin{i};
+         else % If not, 
+            G = varargin{i}; % It's partials
          end
       else
-         if length(varargin{i}) == 1
-            chop = varargin{i};
+         if length(varargin{i}) == 1 % If a single value was entered, it's either chop flag or Poisson's ratio
+            if varargin{i} <= 0.5 % If it's less than or equal to 0.5, it's PR
+               pr = varargin{i};
+            else
+               chop = varargin{i}; % If not, it's chop flag
+            end
+         elseif length(varargin{i}) == 2 % If a 2-element vector was specified,
+            lame = varargin{i}; % Lame parameters were specified            
          elseif length(varargin{i}) == 6
             rems = varargin{i}; % Remote stress tensor
          end
@@ -170,8 +176,17 @@ opt = logical([repmat([0 1], tne, 1); opt]);
 
 % Call GetTriCombinedPartials for elements and coordinates
 if ~exist('G', 'var')
-   mu = 3e10; lambda = 3e10; % Default Lame constants (Pa)
-   [G.u, G.e, G.tz] = GetTriCombinedPartials(patch, cc, opt);
+   % Check for existence of specified Lame parameters
+   if ~exist('lame', 'var')
+      mu = 3e10; lambda = 3e10; % Defaults
+   else
+      mu = lame(1); lambda = lame(2);
+   end
+   % Check for existence of specified Poisson's ratio
+   if ~exist('pr', 'var')
+      pr = 0.25;
+   end
+   [G.u, G.e, G.tz] = GetTriCombinedPartials(patch, cc, opt, pr);
    G.e = G.e./1e6; % Internal conversion assuming mm is unit of slip
    G.e = StrainToStressComp(G.e', mu, lambda)'; 
    G.sp = ProjectStrainPartialsMats(G.e(1:6*tne, :), patch.strike, patch.dip);
