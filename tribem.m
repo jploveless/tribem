@@ -98,7 +98,7 @@ noa = length(varargin);
 if noa > 0
    for i = 1:noa % Loop through optional arguments
       if isstruct(varargin{i}) % If it's a structure, it's either observations or partials
-         if isfield(varargin{i}, 'x') % If field x exists, it's observations
+         if isfield(varargin{i}, 'lon') % If field lon exists, it's observations
             obs = varargin{i};
          else % If not, 
             G = varargin{i}; % It's partials
