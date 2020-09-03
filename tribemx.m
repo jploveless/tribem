@@ -22,11 +22,11 @@ function [slip, trac, varargout] = tribemx(patch, d, bc, varargin)
 %   [SLIP, TRAC, O] = TRIBEMX(PATCH, D, BC, OBS) will also calculate values at a set of 
 %   observation coordinates defined by input argument OBS.  OBS can be a structure
 %   containing fields x, y, z, and v, where x, y, and z are N-by-1 arrays giving
-%   the coordinates of N observation points, and v is an integer specifying what 
+%   the coordinates of N observation points, and v is a character specifying what 
 %   will be calculated at these points:
-%      v = 1: Calculate displacement only (returned to O.u as a 3N-by-1 vector)
-%      v = 2: Calculate stress only (returned to O.s as a 6N-by-1 vector)
-%      v = 3: Calculate displacement and stress
+%      u: Calculate displacement (returned to O.u as a 3N-by-1 vector)
+%      s: Calculate stress (returned to O.s as a 6N-by-1 vector)
+%      e: Calculate strain (returned to O.e as 6N-by-1 vector)
 %
 %   [SLIP, TRAC, G] = TRIBEMX(PATCH, D, BC) will output the structure G containing 
 %   fields of Green's functions relating slip to displacement and/or traction. This 
@@ -150,20 +150,18 @@ if exist('obs', 'var')
    obs.y = obs.y(:);
    obs.z = obs.z(:);
    if ~isfield(obs, 'v') % Default behavior is to calculate displacements only at observation coordinates
-      obs.v = 1;
+      obs.v = 'd';
    end
-   if obs.v == 1 % Calculate displacements at observation coordinates
-      opt = repmat([1 0], length(obs.x), 1);
-   elseif obs.v == 2 % Calculate stresses at observation coordinates
-      opt = repmat([0 1], length(obs.x), 1);
-   elseif obs.v == 3 % Calculate displacements and stresses at observation coordinates
-      opt = repmat([1 1], length(obs.x), 1);
-   else
-      opt = zeros(0, 2);
+   opt = zeros(length(obs.x), 1);
+   if contains(obs.v, 'd') % Calculate displacements at observation coordinates
+      opt(:, 1) = 1;
+   end
+   if contains(obs.v, 's') | containts(obs.v, 'e') % Calculate stresses/strains at observation coordinates
+      opt(:, 2) = 1;
    end
 else
    [obs.x, obs.y, obs.z] = deal([]);
-   obs.v = 999;
+   obs.v = 'x';
    opt = zeros(0, 2);
 end
 
@@ -187,8 +185,8 @@ if ~exist('G', 'var')
       pr = 0.25;
    end
    [G.u, G.e, G.tz] = GetTriCombinedPartialsx(patch, cc, opt, pr);
-   G.e = StrainToStressComp(G.e', mu, lambda)';
-   G.sp = ProjectStrainPartialsMats(G.e(1:6*tne, :), patch.strike, patch.dip);
+   G.s = StrainToStressComp(G.e', mu, lambda)';
+   G.sp = ProjectStrainPartialsMats(G.s(1:6*tne, :), patch.strike, patch.dip);
 end
 
 % Trim arrays for slip components, if requested and if not already done
@@ -197,7 +195,8 @@ if chop > 0
    triT = find(G.tz == 3);
    colkeep = setdiff(1:3*tne, [3*triD-0; 3*triT-1]); % Define columns to keep
    if size(G.sp, 2) == numel(patch.v) % If the columns have not already been trimmed...
-      G.e = G.e(:, colkeep); % ...trim them
+      G.s = G.s(:, colkeep); % ...trim them
+      G.e = G.e(:, colkeep);
       G.sp = G.sp(:, colkeep);
       if size(G.u, 2) > size(G.e, 2)
          G.u = G.u(:, colkeep);
@@ -252,16 +251,22 @@ else
 end
 
 % Forward calculation for observations
-if obs.v == 1 | obs.v == 3
+if contains(obs.v, 'd')
    o.u = G.u*slip(:);
 else
    o.u = [];
 end
-if obs.v == 2 | obs.v == 3
-   o.s = G.e(6*tne+1:end, :)*slip(:);
+if contains(obs.v, 'e')
+   o.e = G.e(6*tne+1:end, :)*slip(:);
+else
+   o.e = [];
+end
+if contains(obs.v, 's')
+   o.s = G.s(6*tne+1:end, :)*slip(:);
 else
    o.s = [];
 end
+
 
 % Reshape if original boundary condition array was n-by-3
 if c3 == 1
@@ -271,7 +276,7 @@ end
 
 % Process optional output arguments
 if nargout == 3 % 3rd argument could be o or G
-   if obs.v == 999 % If no observation points are specified, it must be G
+   if contains(obs.v, 'x') % If no observation points are specified, it must be G
       varargout{:} = G;
    else
       varargout{:} = o;
