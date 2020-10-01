@@ -156,7 +156,7 @@ if exist('obs', 'var')
    if contains(obs.v, 'd') % Calculate displacements at observation coordinates
       opt(:, 1) = 1;
    end
-   if contains(obs.v, 's') | containts(obs.v, 'e') % Calculate stresses/strains at observation coordinates
+   if contains(obs.v, 's') | contains(obs.v, 'e') % Calculate stresses/strains at observation coordinates
       opt(:, 2) = 1;
    end
 else
@@ -257,12 +257,22 @@ else
    o.u = [];
 end
 if contains(obs.v, 'e')
-   o.e = G.e(6*tne+1:end, :)*slip(:);
+   if exist('rems', 'var')
+      oreme = StressToStrainComp(rems, 3e10, 3e10);
+   else
+      oreme = 0;
+   end
+   o.e = G.e(6*tne+1:end, :)*slip(:) + oreme;
 else
    o.e = [];
 end
 if contains(obs.v, 's')
-   o.s = G.s(6*tne+1:end, :)*slip(:);
+   if exist('rems', 'var')
+      orems = repmat(rems(:), length(obs.x), 1);
+   else
+      orems = 0;
+   end
+   o.s = G.s(6*tne+1:end, :)*slip(:) + orems;
 else
    o.s = [];
 end
