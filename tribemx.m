@@ -152,7 +152,7 @@ if exist('obs', 'var')
    if ~isfield(obs, 'v') % Default behavior is to calculate displacements only at observation coordinates
       obs.v = 'd';
    end
-   opt = zeros(length(obs.x), 1);
+   opt = zeros(length(obs.x), 2); % Initialize observation coordinate calculation option array
    if contains(obs.v, 'd') % Calculate displacements at observation coordinates
       opt(:, 1) = 1;
    end
@@ -258,7 +258,7 @@ else
 end
 if contains(obs.v, 'e')
    if exist('rems', 'var')
-      oreme = StressToStrainComp(rems, 3e10, 3e10);
+      oreme = StressToStrainComp(rems, mu, lambda);
    else
       oreme = 0;
    end
