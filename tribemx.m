@@ -107,8 +107,10 @@ if noa > 0
          if length(varargin{i}) == 1 % If a single value was entered, it's either chop flag or Poisson's ratio
             if varargin{i} <= 0.5 % If it's less than or equal to 0.5, it's PR
                pr = varargin{i};
-            else
-               chop = varargin{i}; % If not, it's chop flag
+            elseif double(varargin{i}) == 1
+               chop = varargin{i}; % If it's a 1 or true, it's chop flag
+            elseif varargin{i} > 1
+               lith = varargin{i}; % If it's greater than one, it's a density for lithostatic stress  
             end
          elseif length(varargin{i}) == 2 % If a 2-element vector was specified,
             lame = varargin{i}; % Lame parameters were specified            
@@ -138,6 +140,26 @@ if exist('rems', 'var')
    rems([5 6]) = 0; % Make sure traction-free surface of half space condition is met
    remsp = ProjectStrainPartialsMats(repmat(rems(:), sum(patch.nEl), 1), patch.strike, patch.dip);
 end
+
+% Add lithostatic stress, if requested
+if exist('lith', 'var')
+   lstress = -abs(lith.*9.8*patch.zc); % Magnitude of lithostatic load; assumes meters and compression
+   lstress = stack6([lstress, lstress, lstress, zeros(sum(patch.nEl), 3)]); % Full stress tensor
+   ltrac = ProjectStrainPartialsMats(lstress, patch.strike, patch.dip); % Lithostatic tractions
+   if exist('remsp', 'var')
+      remsp = remsp + ltrac; % Add lithostatic to existing remote stress
+   else 
+      remsp = ltrac; % Or consider lithostatic as the only remote stress
+   end
+end
+
+% Check for existence of specified Lame parameters
+if ~exist('lame', 'var')
+   mu = 3e10; lambda = 3e10; % Defaults
+else
+   mu = lame(1); lambda = lame(2);
+end
+ 
    
 % Make a structure containing perturbed element centroid coordinates
 % Centroids are perturbed toward the half-space surface along the normal vector
@@ -174,12 +196,6 @@ opt = logical([repmat([0 1], tne, 1); opt]);
 
 % Call GetTriCombinedPartials for elements and coordinates
 if ~exist('G', 'var')
-   % Check for existence of specified Lame parameters
-   if ~exist('lame', 'var')
-      mu = 3e10; lambda = 3e10; % Defaults
-   else
-      mu = lame(1); lambda = lame(2);
-   end
    % Check for existence of specified Poisson's ratio
    if ~exist('pr', 'var')
       pr = 0.25;
@@ -234,20 +250,20 @@ if ~exist('remsp', 'var') % If there is no remote stress
    slip(itrac) = m;
    % Assemble full traction vector (prescribed and estimated)
    trac = zeros(3*tne, 1);
-   trac(islip) = dstress(islip);
-   trac(itrac) = ptrac;
+   trac(islip) = dstress(islip); % Traction from prescribed slip
+   trac(itrac) = ptrac; % Prescribed traction
 else
    elstress = 0*d; % Full element stress vector
    elstress(itrac) = ptrac; % Corrected traction is prescribed traction minus contribution from displacement b.c. 
    elstress = elstress - dstress - remsp; % Also corrected for remote stress projected onto elements
-   g = G.sp; seye = eye(size(G.sp, 1));
-   g(:, islip) = seye(:, islip);
+   g = G.sp; seye = eye(size(G.sp, 1)); % Set up design matrix
+   g(:, islip) = seye(:, islip); % Substitute identity matrix for prescribed slip columns
    m = g\elstress;
    % Assemble full slip vector (prescribed and estimated)
    slip = m;
    slip(islip) = pslip;
    % Assemble full traction vector (prescribed and estimated)
-   trac = elstress;
+   trac = -elstress;
 end
 
 % Forward calculation for observations
