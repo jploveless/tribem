@@ -41,6 +41,10 @@ function [slip, trac, varargout] = tribemx(patch, d, bc, varargin)
 % 
 %   REMS = [sigma_xx, sigma_yy, 0, sigma_xy, 0, 0]'; % 0 values for components involving z
 %
+%   [...] = TRIBEMX(PATCH, D, BC, RHO) allows specification of a density (assumed kg/m^3)
+%   that will be used to apply lithostatic stress to the problem. RHO must be greater than 
+%   1; if you wish to ignore lithostatic stress, don't prescribe a density. 
+%
 %   [...] = TRIBEMX(PATCH, D, BC, G) uses a structure G of already-calculated
 %   traction (G.sp) and displacement partials (G.u).  No checking is done to assure
 %   that the sizes of G fields are appropriate for the problem; this must be done
