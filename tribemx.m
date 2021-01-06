@@ -75,7 +75,7 @@ function [slip, trac, varargout] = tribemx(patch, d, bc, varargin)
 %                     +    |     - 
 % ----------------------------------------
 % 1. Strike shear: Strike  | Strike + 180
-% 2.    Dip shear: Downdip | Updip
+% 2.    Dip shear: Updip   | Downdip
 % 3.       Normal: Tensile | Compressional
 %
 % For comparison, Poly3D's sign conventions are:
@@ -274,6 +274,9 @@ end
 % Forward calculation for observations
 if contains(obs.v, 'd')
    o.u = G.u*slip(:);
+   if c3 == 1
+      o.u = unstack3(o.u);
+   end
 else
    o.u = [];
 end
@@ -284,6 +287,9 @@ if contains(obs.v, 'e')
       oreme = 0;
    end
    o.e = G.e(6*tne+1:end, :)*slip(:) + oreme;
+   if c3 == 1
+      o.e = stack6(o.e);
+   end
 else
    o.e = [];
 end
@@ -294,6 +300,9 @@ if contains(obs.v, 's')
       orems = 0;
    end
    o.s = G.s(6*tne+1:end, :)*slip(:) + orems;
+   if c3 == 1
+      o.s = unstack6(o.s);
+   end
 else
    o.s = [];
 end

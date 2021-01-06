@@ -49,6 +49,5 @@ un = sined.*(coss.*(uxz.*(cosed) + uxx.*(coss).*(sined) - uxy.*(sins).*(sined)) 
 % Write the projected partials
 Gp = zeros(size(G, 1)/2, size(G, 2));
 Gp(1:3:end, :) = us;
-Gp(2:3:end, :) = ud;
+Gp(2:3:end, :) = -ud; % Sign change to make traction and slip consistent
 Gp(3:3:end, :) = un;
-
