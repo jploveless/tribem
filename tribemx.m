@@ -247,7 +247,6 @@ if ~exist('remsp', 'var') % If there is no remote stress
    % Corrected traction is prescribed traction minus contribution from displacement b.c.
    elstress = ptrac - dstress(itrac);
    % Estimate slips that produce corrected traction
-   keyboard
    m = G.sp(itrac, esidx)\elstress;
    % Assemble full slip vector (prescribed and estimated)
    slip = zeros(3*tne, 1);
