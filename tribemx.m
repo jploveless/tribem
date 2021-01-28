@@ -287,7 +287,7 @@ if contains(obs.v, 'e')
    end
    o.e = G.e(6*tne+1:end, :)*slip(:) + oreme;
    if c3 == 1
-      o.e = stack6(o.e);
+      o.e = unstack6(o.e);
    end
 else
    o.e = [];
