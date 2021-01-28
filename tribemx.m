@@ -273,7 +273,7 @@ end
 % Forward calculation for observations
 if contains(obs.v, 'd')
    o.u = G.u*slip(:);
-   if c3 == 1
+   if c3 == 1 % Check to see if output should be multicolumn
       o.u = unstack3(o.u);
    end
 else
@@ -286,7 +286,7 @@ if contains(obs.v, 'e')
       oreme = 0;
    end
    o.e = G.e(6*tne+1:end, :)*slip(:) + oreme;
-   if c3 == 1
+   if c3 == 1 % Check to see if output should be multicolumn
       o.e = unstack6(o.e);
    end
 else
@@ -299,7 +299,7 @@ if contains(obs.v, 's')
       orems = 0;
    end
    o.s = G.s(6*tne+1:end, :)*slip(:) + orems;
-   if c3 == 1
+   if c3 == 1 % Check to see if output should be multicolumn
       o.s = unstack6(o.s);
    end
 else
