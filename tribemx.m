@@ -161,9 +161,11 @@ end
 if ~exist('lame', 'var')
    mu = 3e10; lambda = 3e10; % Defaults
 else
-   mu = lame(1); lambda = lame(2);
+   mu = lame(2); lambda = lame(1);
 end
- 
+
+% (Re)calculate Poisson's ratio from Lame parameters
+pr = lambda./(2*(lambda + mu));
    
 % Make a structure containing perturbed element centroid coordinates
 % Centroids are perturbed toward the half-space surface along the normal vector
