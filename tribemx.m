@@ -287,7 +287,7 @@ if contains(obs.v, 'e')
    else
       oreme = 0;
    end
-   o.e = G.e(6*tne+1:end, :)*slip(:) + oreme;
+   o.e = G.e(6*tne+1:end, :)*slip(:) + repmat(oreme(:), length(obs.x), 1);
    if c3 == 1 % Check to see if output should be multicolumn
       o.e = unstack6(o.e);
    end
