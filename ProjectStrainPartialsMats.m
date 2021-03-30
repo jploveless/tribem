@@ -17,7 +17,7 @@ function Gp = ProjectStrainPartials(G, strike, dip, rake);
 
 % Handle dips > 90
 strike(dip > 90) = wrapTo360(strike(dip > 90) + 180);
-dip(dip > 90) = dip(dip > 90) - 90;
+dip(dip > 90) = 180 - dip(dip > 90);
 
 % Check rake
 if ~exist('rake', 'var')

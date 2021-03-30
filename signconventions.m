@@ -19,7 +19,7 @@ bc = repmat([1 1 0], size(b.v, 1), 1); % All traction conditions
 obs.x = x(:); obs.y = y(:); obs.z = 0*ones(size(obs.x)); 
 % Calculate stress, displacement, and strain
 obs.v = 'sde';
-
+keyboard
 % Run tribem with remote stress tensor of 1 unit in the s_yy direction
 % (Tension perpendicular to fault)
 [slip, trac, out, G] = tribemx(b, d, bc, [0 1 0 0 0 0], obs);
