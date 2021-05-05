@@ -164,8 +164,10 @@ else
    mu = lame(2); lambda = lame(1);
 end
 
-% (Re)calculate Poisson's ratio from Lame parameters
-pr = lambda./(2*(lambda + mu));
+if ~exist('pr', 'var') % If pr hasn't been specified as input argument,
+   % (Re)calculate Poisson's ratio from Lame parameters
+   pr = lambda./(2*(lambda + mu));
+end   
    
 % Make a structure containing perturbed element centroid coordinates
 % Centroids are perturbed toward the half-space surface along the normal vector
@@ -184,7 +186,7 @@ if exist('obs', 'var')
    if contains(obs.v, 'd') % Calculate displacements at observation coordinates
       opt(:, 1) = 1;
    end
-   if contains(obs.v, 's') | contains(obs.v, 'e') % Calculate stresses/strains at observation coordinates
+   if contains(obs.v, 's') || contains(obs.v, 'e') % Calculate stresses/strains at observation coordinates
       opt(:, 2) = 1;
    end
 else
@@ -294,6 +296,7 @@ if contains(obs.v, 'e')
 else
    o.e = [];
 end
+keyboard
 if contains(obs.v, 's')
    if exist('rems', 'var')
       orems = repmat(rems(:), length(obs.x), 1);

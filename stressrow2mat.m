@@ -14,8 +14,7 @@ nrows = size(row, 1);
 % Allocate space for reshaped matrix
 mat = zeros(3*nrows, 3);
 
-for i = 1:nrows
-   mat(3*i-2, :) = row(i, [1 4 5]);
-   mat(3*i-1, :) = row(i, [4 2 6]);
-   mat(3*i-0, :) = row(i, [5 6 3]);
-end
+% Insert row entries in correct row, column locations
+mat(1:3:end, :) = row(:, [1 4 5]);
+mat(2:3:end, :) = row(:, [4 2 6]);
+mat(3:3:end, :) = row(:, [5 6 3]);
