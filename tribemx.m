@@ -276,9 +276,24 @@ end
 
 % Forward calculation for observations
 if contains(obs.v, 'd')
-   o.u = G.u*slip(:);
+   o.u = G.u*slip(:); % Displacement arising from slip
+   
+   if exist('rems', 'var')
+      % Add contribution from remote stress
+      oreme = StressToStrainComp(rems, mu, lambda); % Get remote strain tensor
+      x0 = mean(obs.x); y0 = mean(obs.y); z0 = 0*obs.z; % Reference coordinates
+      x0 = min([min(obs.x), min(patch.c(:, 1))]); y0 = min([min(obs.y), min(patch.c(:, 2))]); z0 = 0*obs.z; % Reference coordinates
+      uxeo = [obs.x - x0, obs.y - y0]; % x-displacement partials
+      uyeo = [obs.y - y0, obs.x - x0]; % y-displacement partials
+      G.eo = zeros(3*length(obs.x), 6); % Full partials matrix
+      G.eo(1:3:end, [1 4]) = uxeo; % Insert x partials
+      G.eo(2:3:end, [2 4]) = uyeo; % Insert y partials
+      o.eu = G.eo*oreme(:); % Add contributions from remote strain
+   end
+   
    if c3 == 1 % Check to see if output should be multicolumn
       o.u = unstack3(o.u);
+      o.eu = unstack3(o.eu);
    end
 else
    o.u = [];
@@ -296,7 +311,7 @@ if contains(obs.v, 'e')
 else
    o.e = [];
 end
-keyboard
+
 if contains(obs.v, 's')
    if exist('rems', 'var')
       orems = repmat(rems(:), length(obs.x), 1);
