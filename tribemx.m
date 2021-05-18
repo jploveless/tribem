@@ -20,13 +20,16 @@ function [slip, trac, varargout] = tribemx(patch, d, bc, varargin)
 %   element, given as 0 for slip conditions and 1 for traction conditions.
 %
 %   [SLIP, TRAC, O] = TRIBEMX(PATCH, D, BC, OBS) will also calculate values at a set of 
-%   observation coordinates defined by input argument OBS.  OBS can be a structure
+%   observation coordinates defined by input argument OBS.  OBS is a structure
 %   containing fields x, y, z, and v, where x, y, and z are N-by-1 arrays giving
 %   the coordinates of N observation points, and v is a character specifying what 
 %   will be calculated at these points:
 %      u: Calculate displacement (returned to O.u as a 3N-by-1 vector)
 %      s: Calculate stress (returned to O.s as a 6N-by-1 vector)
 %      e: Calculate strain (returned to O.e as 6N-by-1 vector)
+%   An optional field, rc, specifies the reference coordinates used for
+%   calculation of displacements due to remote stress (strain), as
+%   described below. 
 %
 %   [SLIP, TRAC, G] = TRIBEMX(PATCH, D, BC) will output the structure G containing 
 %   fields of Green's functions relating slip to displacement and/or traction. This 
@@ -40,6 +43,15 @@ function [slip, trac, varargout] = tribemx(patch, d, bc, varargin)
 %   REMS. The tensor components, assuming Cartesian coordinates, should be given as
 % 
 %   REMS = [sigma_xx, sigma_yy, 0, sigma_xy, 0, 0]'; % 0 values for components involving z
+%
+%   When a remote stress tensor and observation coordinates are specified,
+%   the output variables at observation coordinates will represent
+%   contributions from slip on faults as well as the remote stress. For
+%   displacement and strain, the remote stress tensor is converted to a
+%   remote strain tensor and then added to the displacement/strain arising
+%   from fault slip. In the case of displacements, the reference
+%   coordinates are chosen as the minimum x, y, and z of the faults and
+%   observation coordinates, unless specified in the 3-element vector obs.rc.  
 %
 %   [...] = TRIBEMX(PATCH, D, BC, RHO) allows specification of a density (assumed kg/m^3)
 %   that will be used to apply lithostatic stress to the problem. RHO must be greater than 
@@ -281,11 +293,14 @@ if contains(obs.v, 'd')
    if exist('rems', 'var')
       % Add contribution from remote stress
       oreme = StressToStrainComp(rems, mu, lambda); % Get remote strain tensor
-%      x0 = mean(obs.x); y0 = mean(obs.y); z0 = 0*obs.z; % Reference coordinates
       % Reference coordinates
-      x0 = min([min(obs.x), min(patch.c(:, 1))]); 
-      y0 = min([min(obs.y), min(patch.c(:, 2))]); 
-      z0 = min([min(obs.z), min(patch.c(:, 3))]); 
+      if isfield(obs, 'rc')
+         x0 = obs.rc(1); y0 = obs.rc(2); z0 = obs.rc(3);
+      else
+         x0 = min([min(obs.x), min(patch.c(:, 1))]); 
+         y0 = min([min(obs.y), min(patch.c(:, 2))]); 
+         z0 = min([min(obs.z), min(patch.c(:, 3))]); 
+      end
       uxeo = [obs.x - x0, obs.y - y0]; % x-displacement partials
       uyeo = [obs.y - y0, obs.x - x0]; % y-displacement partials
       uzeo = obs.z - z0;
