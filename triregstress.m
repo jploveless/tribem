@@ -177,9 +177,10 @@ xlabel('Stress ratio (R)');
 ylabel('\sigma_H orientation (\theta)');
 [minaz, minr] = find(C == min(C(:)));
 hold on
-vline([1 2], 'color', 'k', 'linewidth', 1.5);
-hline(angrange(minaz), 'color', 0.5*[1 1 1], 'linewidth', 1);
-vline(Rbar(minr), 'color', 0.5*[1 1 1], 'linewidth', 1);
+aa = axis;
+line([1 2; 1 2], [aa(3:4); aa(3:4)], 'color', 'k', 'linewidth', 1.5);
+line([Rbar(minr); Rbar(minr)], aa(3:4)', 'color', 0.5*[1 1 1], 'linewidth', 1);
+line(aa(1:2)', [angrange(minaz); angrange(minaz)], 'color', 0.5*[1 1 1], 'linewidth', 1);
 c = colorbar;
 c.Label.String = 'Cost';
 fs = 12; % font size
