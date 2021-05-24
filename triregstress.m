@@ -145,37 +145,46 @@ for h = 1:3
    % For each set of principal stress magnitudes,
    for i = 1:nstr 
       ns = diag(sall(i, cols(h, :))); % Create principal stress matrix
-      Rbar(nstr*(h-1)+i) = R(i) + (h-1); % Place Rbar value
-      % For each horizontal stress azimuth,
-      for j = 1:naz 
-         % Define azimuthal rotation matrix; these are principal stress eigenvectors
-         rot = [sind(angrange(j)), cosd(angrange(j)), 0; cosd(angrange(j)), -sind(angrange(j)), 0; 0 0 1];
-         % Rotate stress components
-         smat = rot'*ns*rot;
-   
-         % Multiply remote stress by fault-related partials to give stress at observation coordinates
-         % Add remote stress to give total stress at each point
-         stot = G.tot*smat([1 5 9 2 3 6])' + repmat(smat([1 5 9 2 3 6])', nds, 1);
-         stotm = stressrow2mat(unstack6(stot)); % Create stacked 3x3 tensors for each observation 
-         % For each observation,
-         for k = 1:nds
-            % Calculate principal stresses orientations
-            [psv, ~] = eig(stotm(3*k-2:3*k, :), 'vector');
-            % Calculate misfit: 1 minus dot product of sigma_3 and element normal
-            c(k) = 1 - dot(psv(:, ds.ft(k)), ds.nv(k, :)').^2;
-         end % End observation loop
-         % Cost for this stress field trial is mean of observation costs
-         C(j, (h-1)*nstr + i) = mean(c);
-      end % End azimiuth loop
+      if ns(1, 1) ~= ns(2, 2) % When horizontal stresses are equal, can't test stress rotation
+         Rbar(nstr*(h-1)+i) = R(i) + (h-1); % Place Rbar value
+         % For each horizontal stress azimuth,
+         for j = 1:naz 
+            % Define azimuthal rotation matrix; these are principal stress eigenvectors
+            rot = [sind(angrange(j)), cosd(angrange(j)), 0; cosd(angrange(j)), -sind(angrange(j)), 0; 0 0 1];
+            % Rotate stress components
+            smat = rot'*ns*rot;
+      
+            % Multiply remote stress by fault-related partials to give stress at observation coordinates
+            % Add remote stress to give total stress at each point
+            stot = G.tot*smat([1 5 9 2 3 6])' + repmat(smat([1 5 9 2 3 6])', nds, 1);
+            stotm = stressrow2mat(unstack6(stot)); % Create stacked 3x3 tensors for each observation 
+            % For each observation,
+            for k = 1:nds
+               % Calculate principal stresses orientations
+               thisstress = stotm(3*k-2:3*k, :);
+               [psv, ~] = eig(thisstress);
+               % Calculate misfit: 1 minus dot product of sigma_3 and element normal
+               c(k) = 1 - dot(psv(:, ds.ft(k)), ds.nv(k, :)').^2;
+            end % End observation loop
+            % Cost for this stress field trial is mean of observation costs
+            C(j, (h-1)*nstr + i) = mean(c);
+         end % End azimiuth loop
+      end % End test of equal horizontal stresses
    end % End stress magnitude loop
 end % End stress domain loop
 
+% Check for equal horizontal stress columns
+ehsc = sum(abs(C)) == 0;
+% Only retain tested stresses
+C = C(:, ~ehsc);
+Rbar = Rbar(~ehsc);
+
 % Create cost figure
 figure
-pcolor(Rbar, angrange, C); shading flat
-xlabel('Stress ratio (R)');
-ylabel('\sigma_H orientation (\theta)');
-[minaz, minr] = find(C == min(C(:)));
+pcolor(Rbar, angrange, C); shading interp
+xlabel('Stress ratio ($$\bar{R}$$)', 'interpreter', 'latex');
+ylabel('$$\sigma_H$$ orientation $$(\theta)$$', 'interpreter', 'latex');
+[minaz, minr] = find(C == min(C(:)), 1);
 hold on
 aa = axis;
 line([1 2; 1 2], [aa(3:4); aa(3:4)], 'color', 'k', 'linewidth', 1.5);
