@@ -314,7 +314,9 @@ if contains(obs.v, 'd')
    
    if c3 == 1 % Check to see if output should be multicolumn
       o.u = unstack3(o.u);
-      o.eu = unstack3(o.eu);
+      if isfield(o, 'eu')
+         o.eu = unstack3(o.eu);
+      end
    end
 else
    o.u = [];
@@ -323,7 +325,7 @@ if contains(obs.v, 'e')
    if exist('rems', 'var')
       oreme = StressToStrainComp(rems, mu, lambda);
    else
-      oreme = 0;
+      oreme = zeros(6, 1);
    end
    o.e = G.e(6*tne+1:end, :)*slip(:) + repmat(oreme(:), length(obs.x), 1);
    if c3 == 1 % Check to see if output should be multicolumn
@@ -337,7 +339,7 @@ if contains(obs.v, 's')
    if exist('rems', 'var')
       orems = repmat(rems(:), length(obs.x), 1);
    else
-      orems = 0;
+      orems = zeros(6*length(obs.x), 1);
    end
    o.s = G.s(6*tne+1:end, :)*slip(:) + orems;
    if c3 == 1 % Check to see if output should be multicolumn
