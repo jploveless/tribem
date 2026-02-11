@@ -84,10 +84,19 @@ end
 psc = 1e-5; % Centroid perturbation scaling factor
 [cent.x, cent.y, cent.z] = deal(patch.xc+psc.*patch.nv(:, 1), patch.yc+psc.*patch.nv(:, 2), patch.zc+psc.*patch.nv(:, 3));
 
+% Define an observation grid
+gridwidth = max(ds.x) - min(ds.x);
+gridheight =  max(ds.y) - min(ds.y);
+gridpoints = 50;
+gridincrement = min([gridwidth, gridheight])/50;
+[grid.x, grid.y] = meshgrid((min(ds.x)-0.1*gridwidth):gridincrement:(max(ds.x)+0.1*gridwidth), (min(ds.y)-0.1*gridheight):gridincrement:(max(ds.y)+0.1*gridheight));
+n_grid = numel(grid.x);
+
 % Augmented calculation coordinates (element centroids and observation coordinates)
-cc.x = [cent.x; ds.x(:)];
-cc.y = [cent.y; ds.y(:)];
-cc.z = [cent.z; ds.z(:)];
+% cent are element centroids, ds are data points, and grid is a regular observation grid
+cc.x = [cent.x; ds.x(:); grid.x(:)];
+cc.y = [cent.y; ds.y(:); grid.y(:)];
+cc.z = [cent.z; ds.z(:); 0*grid.x(:)];
 
 % Define combined stress-slip-traction-remote stress partial derivatives
 if ~exist('G', 'var')
@@ -104,16 +113,20 @@ if ~exist('G', 'var')
    g = G.sp; seye = eye(size(G.sp, 1)); % Set up design matrix
    g(:, 3:3:end) = seye(:, 3:3:end); % Substitute identity matrix for tensile slip columns
    % Extract stress partials for data points
-   G.sd = G.s(6*tne+1:end, :); 
+   G.sd = G.s(6*tne+(1:6*nds), :); 
+   % Extract stress partials for grid points
+   G.sd_grid = G.s(6*tne+6*nds+1:end, :); 
    % Calculate regional stress projection partials
    G.rp = GetProjectedRegionalTensorPartials(patch.strike, patch.dip);
 
    % Combine observation and slip stress partials with regional tensor projection partials
    G.spi = g\eye(size(g, 1)); % Invert traction partials
    G.spi(3:3:end, :) = 0; % Zero out tensile slip components
-   G.tot = G.spi*-G.rp; % Traction partials times projection partials
-   G.tot = G.sd*G.tot; % Observation stress partials times combined
+   G.tp = G.spi*-G.rp; % Traction partials times projection partials
+   G.tot = G.sd*G.tp; % Observation stress partials times combined
+   G.tot_grid = G.sd_grid*G.tp; % Observation stress partials times combined (grid)
 end
+
 %
 % Define stress field test ranges
 %
@@ -140,6 +153,9 @@ c = zeros(nds, 1);
 C = zeros(naz, 3*nstr);
 Rbar = zeros(3*nstr, 1);
 
+% Allocate space for all tested stress configurations
+smat_save = zeros(naz, 3*nstr, 9);
+trial = 0; % Initiate trial counter
 % For each stress domain (normal, wrench, reverse),
 for h = 1:3
    % For each set of principal stress magnitudes,
@@ -149,11 +165,12 @@ for h = 1:3
          Rbar(nstr*(h-1)+i) = R(i) + (h-1); % Place Rbar value
          % For each horizontal stress azimuth,
          for j = 1:naz 
+            trial = trial+1; % Increment trial counter
             % Define azimuthal rotation matrix; these are principal stress eigenvectors
             rot = [sind(angrange(j)), cosd(angrange(j)), 0; cosd(angrange(j)), -sind(angrange(j)), 0; 0 0 1];
             % Rotate stress components
             smat = rot'*ns*rot;
-      
+            smat_save(j, (h-1)*nstr + i, :) = smat(:)'; % Save this stress tensor to the trial row
             % Multiply remote stress by fault-related partials to give stress at observation coordinates
             % Add remote stress to give total stress at each point
             stot = G.tot*smat([1 5 9 2 3 6])' + repmat(smat([1 5 9 2 3 6])', nds, 1);
@@ -196,3 +213,24 @@ fs = 12; % font size
 lw = 1; % line width
 tl = [0.008 0.008]; % tick length
 set(gca, 'fontsize', fs, 'linewidth', lw, 'ticklength', tl, 'layer', 'top', 'box', 'on');
+
+% Create figure of stress perturbation field for the best trial
+trial_smat = smat_save(minaz, minr, [1 5 9 2 3 6]);
+trial_stress = G.tot_grid*trial_smat(:);% + repmat(trial_smat(:), n_grid, 1);;
+trial_stressm = stressrow2mat(unstack6(trial_stress));
+for grid_idx = 1:n_grid
+	this_grid_stress = trial_stressm(3*grid_idx-2:3*grid_idx, :);
+	[~, val] = eig(this_grid_stress);
+	mean_grid_stress(grid_idx) = mean(diag(val));
+end
+fn = figure;
+pcolor(grid.x, grid.y, reshape(-mean_grid_stress, size(grid.x)))
+shading flat
+hold on
+meshview(patch.c, patch.v, fn);
+axis equal; axis tight
+xlabel('X'); ylabel('Y')
+c = colorbar;
+c.Label.String = '$\sigma_m$'; c.Label.Interpreter = 'latex'; c.Label.FontSize = 14;
+caxis([-0.5, 0.5])
+colormap(bluewhitered)
